@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  async_downloader:
+    build: .
+    container_name: async_downloader
+    ports: 
+      - "8080:8080"
+    volumes:
+      - /opt/app/async:/opt/app/photos
