@@ -34,6 +34,13 @@ pip install -r requirements.txt
 python server.py
 ```
 
+при необходимости можно создать `.env` файл, в котором указать:
+```
+LOGGING - включение и отключение логирования, по умолчанию False
+PHOTO_PATH - путь до каталога, по умолчанию photos в корне проекта
+DELAY - задержка скачивания в секундах, по умолчанию 0
+```
+
 Сервер запустится на порту 8080, чтобы проверить его работу перейдите в браузере на страницу [http://127.0.0.1:8080/](http://127.0.0.1:8080/).
 
 ## Как развернуть на сервере
@@ -47,6 +54,21 @@ python server.py
 ```
 GET http://host.ru/archive/3bea29ccabbbf64bdebcc055319c5745/
 GET http://host.ru/archive/af1ad8c76fda2e48ea9aed2937e972ea/
+```
+
+## Как развернуть в контейнере 
+[Установите Docker](https://docs.docker.com/engine/install/) и [Docker Compose](https://docs.docker.com/compose/install/) если этого ещё не сделали.
+
+указать в файле `docker-compose.yml` абсолютный путь до каталога с фото:
+```
+volumes:
+      - {REPLACE_ME}:/opt/app/photos
+```
+Так же, при необходимости, можно изменить переменные окружения `LOGGING` и `DELAY`
+
+Запустите проект командой:
+```bash
+docker compose up -d
 ```
 
 # Цели проекта

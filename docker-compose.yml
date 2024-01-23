@@ -6,7 +6,7 @@ services:
     ports: 
       - "8080:8080"
     volumes:
-      - photos:/opt/app/photos
-
-volumes:
-  photos:
+      - {REPLACE_ME}:/opt/app/photos
+    environment:
+      - LOGGING=False
+      - DELAY=0
