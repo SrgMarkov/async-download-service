@@ -21,7 +21,7 @@ async def archive(request):
     response.headers["Content-Disposition"] = "attachment; filename=photos.zip"
     await response.prepare(request)
 
-    process = await asyncio.create_subprocess_exec(
+    zip_process = await asyncio.create_subprocess_exec(
         "zip",
         "-r",
         "-0",
@@ -36,17 +36,18 @@ async def archive(request):
     step = 1
     while True:
         try:
-            archive_part = await process.stdout.read(510200)
+            archive_part = await zip_process.stdout.read(510200)
             await response.write(archive_part)
             logger.info(f"Загружена {step} часть архива {archive_name}")
             step += 1
-            if process.stdout.at_eof():
+            if zip_process.stdout.at_eof():
                 return response
-        except ConnectionResetError as error:
+        except (ConnectionResetError, BrokenPipeError) as error:
             logger.error(
                 f"Ошибка сетевого соединения - {error}. Скачивание остановлено"
             )
-            break
+            zip_process.terminate()
+            await zip_process.communicate()
 
 
 async def handle_index_page(request):
