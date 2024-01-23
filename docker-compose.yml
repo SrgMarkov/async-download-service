@@ -6,4 +6,7 @@ services:
     ports: 
       - "8080:8080"
     volumes:
-      - /opt/app/async:/opt/app/photos
+      - photos:/opt/app/photos
+
+volumes:
+  photos:

@@ -2,3 +2,4 @@
 /photos
 .DS_Store
 .pylintrc
+.env

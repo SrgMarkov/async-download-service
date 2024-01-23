@@ -4,6 +4,7 @@ import os
 
 from aiohttp import web
 import aiofiles
+from dotenv import load_dotenv
 
 
 logger = logging.getLogger("asyncio_download_service")
@@ -11,9 +12,11 @@ logger = logging.getLogger("asyncio_download_service")
 
 async def archive(request):
     archive_name = request.match_info.get("archive_hash", "archive")
+    photo_path = os.path.join(os.getenv("PHOTO_PATH", "photo"), archive_name)
+    delay = os.getenv("DELAY", "0")
 
-    if not os.path.exists(f"photos/{archive_name}"):
-        async with aiofiles.open("error.html", mode="r") as error_file:
+    if not os.path.exists(photo_path):
+        async with aiofiles.open("html/error.html", mode="r") as error_file:
             error_contents = await error_file.read()
         return web.Response(text=error_contents, content_type="text/html")
 
@@ -30,7 +33,7 @@ async def archive(request):
         ".",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        cwd=f"photos/{archive_name}",
+        cwd=photo_path,
     )
 
     step = 1
@@ -39,28 +42,28 @@ async def archive(request):
             archive_part = await zip_process.stdout.read(510200)
             await response.write(archive_part)
             logger.info(f"Загружена {step} часть архива {archive_name}")
+            await asyncio.sleep(int(delay))
             step += 1
             if zip_process.stdout.at_eof():
                 return response
-        except (ConnectionResetError, BrokenPipeError) as error:
-            logger.error(
-                f"Ошибка сетевого соединения - {error}. Скачивание остановлено"
-            )
+        except (ConnectionResetError, BrokenPipeError, KeyboardInterrupt) as error:
+            logger.error("%e. Скачивание остановлено", error)
             zip_process.terminate()
             await zip_process.communicate()
 
 
 async def handle_index_page(request):
-    async with aiofiles.open("index.html", mode="r") as index_file:
+    async with aiofiles.open("html/index.html", mode="r") as index_file:
         index_contents = await index_file.read()
     return web.Response(text=index_contents, content_type="text/html")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(levelname)-8s [%(asctime)s] %(message)s", level=logging.INFO
-    )
-    logger.setLevel(logging.INFO)
+    load_dotenv()
+    logging.basicConfig(format="%(levelname)-8s [%(asctime)s] %(message)s", level=logging.INFO)
+    if os.getenv("LOGGING", 'False').lower() in ('false', '0', 'f'):
+        logging.disable()
+
     app = web.Application()
     app.add_routes(
         [
