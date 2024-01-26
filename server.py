@@ -11,11 +11,16 @@ logger = logging.getLogger("asyncio_download_service")
 
 
 async def archive(request):
-    archive_name = request.match_info.get("archive_hash", "archive")
+    try:
+        archive_name = request.match_info["archive_hash"]
+    except KeyError:
+        logger.info("не корректный хэш архива")
+
     photo_path = os.path.join(os.getenv("PHOTO_PATH", "photo"), archive_name)
     delay = os.getenv("DELAY", "0")
 
     if not os.path.exists(photo_path):
+        print("not exist")
         async with aiofiles.open("html/error.html", mode="r") as error_file:
             error_contents = await error_file.read()
         return web.Response(text=error_contents, content_type="text/html")
@@ -42,9 +47,7 @@ async def archive(request):
         try:
             archive_part = await zip_process.stdout.read(510200)
             await response.write(archive_part)
-            logger.info(f"Загружена {step} часть архива {archive_name}")
             await asyncio.sleep(int(delay))
-            step += 1
             if zip_process.stdout.at_eof():
                 return response
 
@@ -53,16 +56,22 @@ async def archive(request):
                 logger.error(f"{error} - Скачивание прервано")
                 break
             connection_failture = True
-            logger.error(
-                f"{error} - Попытка перезапуска процесса через 5 секунд"
-            )
-            await asyncio.sleep(5)
+            logger.error(f"Завершение процесса архивации {archive_name}")
+            await asyncio.sleep(1)
 
         finally:
-            if zip_process.returncode is not None or connection_failture:
-                logger.info(f"Завершение процесса архивации {archive_name}")
+            if zip_process.returncode == 0:
+                logger.info(f"Архив {archive_name} успешно загружен")
+                break
+            if (
+                zip_process.returncode is not None
+                or connection_failture
+            ):
                 zip_process.terminate()
                 await zip_process.communicate()
+                break
+            logger.info(f"Загружена {step} часть архива {archive_name}")
+            step += 1
 
 
 async def handle_index_page(request):
