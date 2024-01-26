@@ -37,7 +37,8 @@ async def archive(request):
     )
 
     step = 1
-    while True:
+    connection_failture = False
+    while not connection_failture:
         try:
             archive_part = await zip_process.stdout.read(510200)
             await response.write(archive_part)
@@ -46,10 +47,22 @@ async def archive(request):
             step += 1
             if zip_process.stdout.at_eof():
                 return response
-        except (ConnectionResetError, BrokenPipeError, KeyboardInterrupt) as error:
-            logger.error("%e. Скачивание остановлено", error)
-            zip_process.terminate()
-            await zip_process.communicate()
+
+        except BaseException as error:
+            if connection_failture:
+                logger.error(f"{error} - Скачивание прервано")
+                break
+            connection_failture = True
+            logger.error(
+                f"{error} - Попытка перезапуска процесса через 5 секунд"
+            )
+            await asyncio.sleep(5)
+
+        finally:
+            if zip_process.returncode is not None or connection_failture:
+                logger.info(f"Завершение процесса архивации {archive_name}")
+                zip_process.terminate()
+                await zip_process.communicate()
 
 
 async def handle_index_page(request):
@@ -60,8 +73,10 @@ async def handle_index_page(request):
 
 if __name__ == "__main__":
     load_dotenv()
-    logging.basicConfig(format="%(levelname)-8s [%(asctime)s] %(message)s", level=logging.INFO)
-    if os.getenv("LOGGING", 'False').lower() in ('false', '0', 'f'):
+    logging.basicConfig(
+        format="%(levelname)-8s [%(asctime)s] %(message)s", level=logging.INFO
+    )
+    if os.getenv("LOGGING", "False").lower() in ("false", "0", "f"):
         logging.disable()
 
     app = web.Application()
