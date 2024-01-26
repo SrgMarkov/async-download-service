@@ -41,37 +41,27 @@ async def archive(request):
         cwd=photo_path,
     )
 
-    step = 1
-    connection_failture = False
-    while not connection_failture:
-        try:
+    try:
+        download_step = 1
+        while not zip_process.stdout.at_eof():
             archive_part = await zip_process.stdout.read(510200)
             await response.write(archive_part)
             await asyncio.sleep(int(delay))
-            if zip_process.stdout.at_eof():
-                return response
+            logger.info(f"Загружена {download_step} часть архива {archive_name}")
+            download_step += 1
+        return response
 
-        except BaseException as error:
-            if connection_failture:
-                logger.error(f"{error} - Скачивание прервано")
-                break
-            connection_failture = True
-            logger.error(f"Завершение процесса архивации {archive_name}")
-            await asyncio.sleep(1)
+    except BaseException as error:
+        logger.error(f"{error} - Скачивание прервано")
+        await asyncio.sleep(1)
 
-        finally:
-            if zip_process.returncode == 0:
-                logger.info(f"Архив {archive_name} успешно загружен")
-                break
-            if (
-                zip_process.returncode is not None
-                or connection_failture
-            ):
-                zip_process.terminate()
-                await zip_process.communicate()
-                break
-            logger.info(f"Загружена {step} часть архива {archive_name}")
-            step += 1
+    finally:
+        if zip_process.returncode == 0:
+            logger.info(f"Архив {archive_name} успешно загружен")
+        if zip_process.returncode is None:
+            logger.info(f"Загрузка архива {archive_name} прервана")
+            zip_process.terminate()
+            await zip_process.communicate()
 
 
 async def handle_index_page(request):
