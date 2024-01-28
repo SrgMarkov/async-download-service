@@ -11,11 +11,11 @@ logger = logging.getLogger("asyncio_download_service")
 
 
 async def archive(request):
-    archive_name = request.match_info["archive_hash"]
+    archive_name = request.match_info.get("archive_hash")
     photo_path = os.path.join(os.getenv("PHOTO_PATH", "photo"), archive_name)
     delay = os.getenv("DELAY", "0")
 
-    if not os.path.exists(photo_path):
+    if not os.path.exists(photo_path) or archive_name is None:
         print("not exist")
         async with aiofiles.open("html/error.html", mode="r") as error_file:
             error_contents = await error_file.read()
