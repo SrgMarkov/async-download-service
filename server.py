@@ -11,11 +11,7 @@ logger = logging.getLogger("asyncio_download_service")
 
 
 async def archive(request):
-    try:
-        archive_name = request.match_info["archive_hash"]
-    except KeyError:
-        logger.info("не корректный хэш архива")
-
+    archive_name = request.match_info["archive_hash"]
     photo_path = os.path.join(os.getenv("PHOTO_PATH", "photo"), archive_name)
     delay = os.getenv("DELAY", "0")
 
